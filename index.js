@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const inquirer = require('inquirer')
 const prompt = inquirer.createPromptModule()
 const _fs = require('fs')
