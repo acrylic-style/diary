@@ -11,7 +11,7 @@
     "diary": "index.js"
   },
   "name": "diary",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "index.js",
   "devDependencies": {},
   "scripts": {

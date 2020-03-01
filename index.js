@@ -56,6 +56,60 @@ const askDBPassword = async () => {
   return dbpassword
 }
 
+// ---
+
+const saveConfig = prefs.save
+
+const selectReadOrWrite = async () => {
+  const { type } = await prompt({
+    type: 'list',
+    name: 'type',
+    message: '　',
+    choices: [ { name: '書く', value: 'write' }, { name: '読む', value: 'read' }, { name: '設定をリセット', value: 'reset', } ],
+  })
+  return type
+}
+
+const selectType = async () => {
+  const { type } = await prompt({
+    type: 'list',
+    name: 'type',
+    message: '日記の種類',
+    choices: [ ...prefs.types, { name: '新しい日記の種類を作成', value: 'new' } ],
+  })
+  return type
+}
+
+async function askType() {
+  const { type } = await prompt({
+    type: 'input',
+    name: 'type',
+    message: '日記の種類を入力',
+    validate: val => val ? true : '日記の種類を入力してください',
+  })
+  return type
+}
+
+async function askName() {
+  const { name } = await prompt({
+    type: 'input',
+    name: 'name',
+    message: '今日の日記のタイトル',
+    validate: val => val ? true : '日記のタイトルを選択してください',
+  })
+  return name
+}
+
+async function askDescription() {
+  const { description } = await prompt({
+    type: 'input',
+    name: 'description',
+    message: '日記の詳細(終了は.exit)',
+    validate: () => true,
+  })
+  return description
+}
+
 const f = async () => {
   if (!['sqlite', 'mysql'].includes(prefs.dialect)) {
     prefs.dialect = await askDBType()
@@ -69,62 +123,8 @@ const f = async () => {
     }
   }
   prefs.save()
-  const data = require('./data')
+  let data
   const chalk = require('chalk')
-
-  const saveConfig = () => {
-    prefs.save()
-  }
-
-  const selectReadOrWrite = async () => {
-    const { type } = await prompt({
-      type: 'list',
-      name: 'type',
-      message: '　',
-      choices: [ { name: '書く', value: 'write' }, { name: '読む', value: 'read' }, { name: '設定をリセット', value: 'reset', } ],
-    })
-    return type
-  }
-
-  const selectType = async () => {
-    const { type } = await prompt({
-      type: 'list',
-      name: 'type',
-      message: '日記の種類',
-      choices: [ ...prefs.types, { name: '新しい日記の種類を作成', value: 'new' } ],
-    })
-    return type
-  }
-
-  async function askType() {
-    const { type } = await prompt({
-      type: 'input',
-      name: 'type',
-      message: '日記の種類を入力',
-      validate: val => val ? true : '日記の種類を入力してください',
-    })
-    return type
-  }
-
-  async function askName() {
-    const { name } = await prompt({
-      type: 'input',
-      name: 'name',
-      message: '今日の日記のタイトル',
-      validate: val => val ? true : '日記のタイトルを選択してください',
-    })
-    return name
-  }
-
-  async function askDescription() {
-    const { description } = await prompt({
-      type: 'input',
-      name: 'description',
-      message: '日記の詳細(終了は.exit)',
-      validate: () => true,
-    })
-    return description
-  }
 
   process.on('dbready', async () => {
     const rwType = await selectReadOrWrite()
@@ -197,5 +197,6 @@ const f = async () => {
         })
     }
   })
+  data = require('./data')
 }
 f()
