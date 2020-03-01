@@ -1,73 +1,146 @@
 #!/usr/bin/env node
 const inquirer = require('inquirer')
+const Preferences = require('preferences')
+const prefs = new Preferences('xyz.acrylicstyle.diary', { types: [] })
 const prompt = inquirer.createPromptModule()
 const _fs = require('fs')
 const fs = _fs.promises
-const config = _fs.existsSync('config.json') && _fs.readFileSync('./config.json').length != 0 ? JSON.parse(_fs.readFileSync('./config.json')) : { types: [] }
-const data = require('./data')
-const chalk = require('chalk')
 
-const saveConfig = () => {
-  _fs.writeFileSync('config.json', JSON.stringify(config))
-}
-
-const selectReadOrWrite = async () => {
-  const { type } = await prompt({
+const askDBType = async () => {
+  const { dbtype } = await prompt({
     type: 'list',
-    name: 'type',
-    message: '　',
-    choices: [ { name: '書く', value: 'write' }, { name: '読む', value: 'read' } ],
+    name: 'dbtype',
+    message: 'データベースの種類を選択',
+    choices: [ { name: 'MySQL', value: 'mysql' }, { name: 'SQLite', value: 'sqlite' } ],
   })
-  return type
+  return dbtype
 }
 
-const selectType = async () => {
-  const { type } = await prompt({
-    type: 'list',
-    name: 'type',
-    message: '日記の種類',
-    choices: [ ...config.types, { name: '新しい日記の種類を作成', value: 'new' } ],
-  })
-  return type
-}
-
-async function askType() {
-  const { type } = await prompt({
+const askDBHost = async () => {
+  const { dbhost } = await prompt({
     type: 'input',
-    name: 'type',
-    message: '日記の種類を入力',
-    validate: val => val ? true : '日記の種類を入力してください',
+    name: 'dbhost',
+    message: 'データベースのホストを入力',
+    validate: val => val ? true : 'データベースのホストを選択してください。',
   })
-  return type
+  return dbhost
 }
 
-async function askName() {
-  const { name } = await prompt({
+const askDBName = async () => {
+  const { dbname } = await prompt({
     type: 'input',
-    name: 'name',
-    message: '今日の日記のタイトル',
-    validate: val => val ? true : '日記のタイトルを選択してください',
+    name: 'dbname',
+    message: 'データベースの名前を入力',
+    validate: val => val ? true : 'データベースの名前を選択してください。',
   })
-  return name
+  return dbname
 }
 
-async function askDescription() {
-  const { description } = await prompt({
+const askDBUser = async () => {
+  const { dbuser } = await prompt({
     type: 'input',
-    name: 'description',
-    message: '日記の詳細(終了は.exit)',
-    validate: () => true,
+    name: 'dbuser',
+    message: 'データベースのユーザー名を入力',
+    validate: val => val ? true : 'データベースのユーザー名を入力してください。',
   })
-  return description
+  return dbuser
 }
 
-process.on('dbready', () => {
-  !(async () => {
+const askDBPassword = async () => {
+  const { dbpassword } = await prompt({
+    type: 'password',
+    name: 'dbpassword',
+    message: 'データベースのパスワードを入力',
+    validate: val => val ? true : 'データベースのパスワードを入力してください。',
+  })
+  return dbpassword
+}
+
+const f = async () => {
+  if (!['sqlite', 'mysql'].includes(prefs.dialect)) {
+    prefs.dialect = await askDBType()
+  }
+  if (prefs.dialect === 'mysql') {
+    if (!prefs.dbhost || !prefs.dbname || !prefs.dbuser || !prefs.dbpassword) {
+      prefs.dbhost = await askDBHost()
+      prefs.dbname = await askDBName()
+      prefs.dbuser = await askDBUser()
+      prefs.dbpassword = await askDBPassword()
+    }
+  }
+  prefs.save()
+  const data = require('./data')
+  const chalk = require('chalk')
+
+  const saveConfig = () => {
+    prefs.save()
+  }
+
+  const selectReadOrWrite = async () => {
+    const { type } = await prompt({
+      type: 'list',
+      name: 'type',
+      message: '　',
+      choices: [ { name: '書く', value: 'write' }, { name: '読む', value: 'read' }, { name: '設定をリセット', value: 'reset', } ],
+    })
+    return type
+  }
+
+  const selectType = async () => {
+    const { type } = await prompt({
+      type: 'list',
+      name: 'type',
+      message: '日記の種類',
+      choices: [ ...prefs.types, { name: '新しい日記の種類を作成', value: 'new' } ],
+    })
+    return type
+  }
+
+  async function askType() {
+    const { type } = await prompt({
+      type: 'input',
+      name: 'type',
+      message: '日記の種類を入力',
+      validate: val => val ? true : '日記の種類を入力してください',
+    })
+    return type
+  }
+
+  async function askName() {
+    const { name } = await prompt({
+      type: 'input',
+      name: 'name',
+      message: '今日の日記のタイトル',
+      validate: val => val ? true : '日記のタイトルを選択してください',
+    })
+    return name
+  }
+
+  async function askDescription() {
+    const { description } = await prompt({
+      type: 'input',
+      name: 'description',
+      message: '日記の詳細(終了は.exit)',
+      validate: () => true,
+    })
+    return description
+  }
+
+  process.on('dbready', async () => {
     const rwType = await selectReadOrWrite()
+    if (rwType === 'reset') {
+      delete prefs.dialect
+      delete prefs.dbhost
+      delete prefs.dbname
+      delete prefs.dbuser
+      delete prefs.dbpassword
+      prefs.save()
+      return f()
+    }
     let type = await selectType()
     if (type === 'new') {
       type = await askType()
-      config.types.push(type)
+      prefs.types.push(type)
       saveConfig()
     }
     data.addTable(type)
@@ -80,7 +153,7 @@ process.on('dbready', () => {
         description = `${description}${desc}\n`
         continue
       }
-      await data.addDiary(type, name, description, Date.now())
+      await data.addDiary(type, name, description, Date.now()/1000)
       console.log('Done! New diary has been created.')
     } else if (rwType === 'read') {
       const diary = await data.getDiary(type)
@@ -89,13 +162,40 @@ process.on('dbready', () => {
         if (s.length === 1) s = `0${s}`
         return s
       }
-      diary.forEach(data => {
-        const date = new Date(data.date)
-        console.log(chalk.yellow(`${date.getFullYear()}/${expandNumber(date.getMonth()+1)}/${expandNumber(date.getDay()+1)} ${expandNumber(date.getHours())}:${expandNumber(date.getMinutes())}:${expandNumber(date.getSeconds())}`))
-        console.log(chalk.green(`タイトル: ${data.name}`))
-        console.log(chalk.white(`内容: ${data.description}`))
-        console.log('\n\n')
+      if (diary.length === 0) {
+        console.log(chalk.red('日記が少なくとも1つ必要です。'))
+        return
+      }
+      const { year } = await prompt({
+        type: 'list',
+        name: 'year',
+        message: '年',
+        choices: diary.map(d => new Date(d.date*1000).getFullYear()),
       })
+      const { month } = await prompt({
+        type: 'list',
+        name: 'month',
+        message: '月',
+        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).map(d => new Date(d.date*1000).getMonth()+1),
+      })
+      const { day } = await prompt({
+        type: 'list',
+        name: 'day',
+        message: '日',
+        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).filter(d => new Date(d.date*1000).getMonth()+1 === month).map(d => new Date(d.date*1000).getDay()+1),
+      })
+      diary
+        .filter(d => new Date(d.date*1000).getFullYear() === year)
+        .filter(d => new Date(d.date*1000).getMonth()+1 === month)
+        .filter(d => new Date(d.date*1000).getDay()+1 === day)
+        .forEach(data => {
+          const date = new Date(data.date*1000)
+          console.log(chalk.yellow(`${date.getFullYear()}/${expandNumber(date.getMonth()+1)}/${expandNumber(date.getDay()+1)} ${expandNumber(date.getHours())}:${expandNumber(date.getMinutes())}:${expandNumber(date.getSeconds())}`))
+          console.log(chalk.green(`タイトル: ${data.name}`))
+          console.log(chalk.white(`内容: ${data.description}`))
+          console.log('\n\n')
+        })
     }
-  })()
-})
+  })
+}
+f()

@@ -1,11 +1,23 @@
+const Preferences = require('preferences')
+const prefs = new Preferences('xyz.acrylicstyle.diary', {})
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op
 console.log(`Connecting to the database using sqlite...`)
-const sequelize = new Sequelize.Sequelize({
-  dialect: 'sqlite',
-  storage: `${__dirname}/database.sqlite`,
-  logging: false,
-})
+let sequelize
+if (prefs.dialect === 'sqlite') {
+  sequelize = new Sequelize.Sequelize({
+    dialect: 'sqlite',
+    storage: `${__dirname}/database.sqlite`,
+    logging: false,
+  })
+} else {
+  sequelize = new Sequelize.Sequelize(prefs.dbname, prefs.dbuser, prefs.dbpassword, {
+    host: prefs.dbhost,
+    dialect: 'mysql',
+    storage: `${__dirname}/database.sqlite`,
+    logging: false,
+  })
+}
 sequelize.authenticate()
   .then(() => {
     console.info(`Connection has been established successfully. (Type: ${sequelize.getDialect()})`)
@@ -35,7 +47,7 @@ module.exports = {
         unique: false,
       },
       date: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.BIGINT,
         unique: true,
       },
     })
