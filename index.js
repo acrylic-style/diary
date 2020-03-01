@@ -15,6 +15,8 @@ if (process.argv[2] && process.argv[2] === '--reset') {
   prefs.save()
 }
 
+const onlyUnique = (value, index, self) => self.indexOf(value) === index
+
 const askDBType = async () => {
   const { dbtype } = await prompt({
     type: 'list',
@@ -179,19 +181,19 @@ const f = async () => {
         type: 'list',
         name: 'year',
         message: '年',
-        choices: diary.map(d => new Date(d.date*1000).getFullYear()),
+        choices: diary.map(d => new Date(d.date*1000).getFullYear()).filter(onlyUnique),
       })
       const { month } = await prompt({
         type: 'list',
         name: 'month',
         message: '月',
-        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).map(d => new Date(d.date*1000).getMonth()+1),
+        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).map(d => new Date(d.date*1000).getMonth()+1).filter(onlyUnique),
       })
       const { day } = await prompt({
         type: 'list',
         name: 'day',
         message: '日',
-        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).filter(d => new Date(d.date*1000).getMonth()+1 === month).map(d => new Date(d.date*1000).getDay()+1),
+        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).filter(d => new Date(d.date*1000).getMonth()+1 === month).map(d => new Date(d.date*1000).getDay()+1).filter(onlyUnique),
       })
       diary
         .filter(d => new Date(d.date*1000).getFullYear() === year)
