@@ -195,6 +195,16 @@ const f = async () => {
         message: '日',
         choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year).filter(d => new Date(d.date*1000).getMonth()+1 === month).map(d => new Date(d.date*1000).getDay()+1).filter(onlyUnique),
       })
+      const { title } = await prompt({
+        type: 'list',
+        name: 'title',
+        message: '日記のタイトル',
+        choices: diary.filter(d => new Date(d.date*1000).getFullYear() === year)
+          .filter(d => new Date(d.date*1000).getMonth()+1 === month)
+          .filter(d => new Date(d.date*1000).getDay()+1 === day)
+          .filter(d => new Date(d.date*1000).getDay()+1)
+          .map(d => d.name),
+      })
       diary
         .filter(d => new Date(d.date*1000).getFullYear() === year)
         .filter(d => new Date(d.date*1000).getMonth()+1 === month)
