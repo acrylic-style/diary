@@ -6,6 +6,15 @@ const prompt = inquirer.createPromptModule()
 const _fs = require('fs')
 const fs = _fs.promises
 
+if (process.argv[2] && process.argv[2] === '--reset') {
+  delete prefs.dialect
+  delete prefs.dbhost
+  delete prefs.dbname
+  delete prefs.dbuser
+  delete prefs.dbpassword
+  prefs.save()
+}
+
 const askDBType = async () => {
   const { dbtype } = await prompt({
     type: 'list',
